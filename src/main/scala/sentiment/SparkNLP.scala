@@ -16,7 +16,6 @@ object SparkNLP {
         val spark = SparkSession.builder.getOrCreate()
         val sc = SparkContext.getOrCreate()
 
-
         // Read in data, save as dataset (Will work with either Answers.csv, or Questions.csv)
         import spark.implicits._ 
         val df = spark.read.format("csv")
@@ -26,20 +25,16 @@ object SparkNLP {
             .option("inferSchema", "true")
             .load("hdfs://indianapolis:62120/project/data/Question.csv")
 
-
-
         //break up the dataset, 28 cores, 3 partitions created per core to leverage Spark
         val df_partition = df.repartition(3 * 28)
-
 
         val ds = df_partition.select($"Body").map(line => { val body = line.getAs[String]("Body").toLowerCase()
             body.replaceAll("\\.|<[^>]*>|,|\\?", " ")
         })
-        println("DS OUTPUT")
+        //println("DS OUTPUT")
 
         // set REGEX for Normalizer
         val reg_str = Array("<[^>]*>", "[^A-Za-z]")
-
 
         // raw data -> document -> token -> normalized tokens -> sentiments
         //############### First Pipeline
@@ -67,7 +62,6 @@ object SparkNLP {
         val finisher = new Finisher()
             .setInputCols("document")
             .setOutputCols("text_array")
-        
 
         //println("TRANSFORMING")
         //val pipeline = new Pipeline().setStages(Array(tokenizer, normalizer, finisher))
@@ -77,7 +71,7 @@ object SparkNLP {
         //val result = pipeline.fit(Seq.empty[String].toDS.toDF("finish")).transform(testing)
 
         val data_normalized = pipeline.fit(ds).transform(ds)
-        println("DATA_NORMALIZED OUTPUT")
+        //println("DATA_NORMALIZED OUTPUT")
         //data_normalized.show(false)
 
         //###############
@@ -98,15 +92,13 @@ object SparkNLP {
 
         //Run the data through, needs a DF column of strs called "text"
         val data_analyzed = sentiment_model.transform(lowercase_str)
-        println("DATA_ANALYZED OUTPUT")
+        //println("DATA_ANALYZED OUTPUT")
         //data_analyzed.show(false)
 
         //grab the results from the sentiment analysis
         val sentiment_results = data_analyzed.select("Sentiment.result")
 
         val results_str = sentiment_results.withColumn("Sentiment", concat_ws(", ",col("result")(0)))
-
-
 
         //sentimentModel = PretrainedPipeline.load("analyze_sentiment", lang="en")
 
